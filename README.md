@@ -51,10 +51,9 @@ const spec = {
 }
 
 app.post("/users", jebenaExpress(spec), () => {
-    //all unwanted data is removed
+    //req.body is validated and all unwanted data is removed
     console.log(req.body) // {email: "test@gmail.com", password:"password"}
 })
-
 ```
 
 That's it. jebena handles the error and returns a 400 response with the below sample body.
