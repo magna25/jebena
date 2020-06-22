@@ -178,7 +178,7 @@ runTests(tests).then(res =>{
     }
     else{
         console.log(`${colorify(Color.BgRed, colorify(Color.FgBlack,` ${res.failed} TEST(S) HAVE FAILED `))}\n`)
-        throw Error()
+        process.exit(1)
     }
     
 })

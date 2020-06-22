@@ -1,20 +1,27 @@
 {
   "name": "jebena",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Lightweight JSON validation library",
+  "main": "src/validator.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
     "test": "node test.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "json",
+    "json validator",
+    "express",
+    "express-validator",
+    "es6 express validator",
+    "node"
+  ],
+  "homepage": "https://github.com/magna25/jebena#readme",
+  "repository": "https://github.com/magna25/jebena",
+  "author": "Henok Hailemariam",
   "license": "ISC",
-  "devDependencies": {
-    "express": "^4.17.1"
-  },
+  "devDependencies": {},
   "dependencies": {},
   "type": "module"
 }

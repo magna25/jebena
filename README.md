@@ -8,7 +8,7 @@ Heavily inspired by https://github.com/lperrin/paperwork
 
 ## Usage
 
-```
+```javascript
 import jebena from 'jebena'
 
 
@@ -34,13 +34,13 @@ jebena(spec, data)
 ```
 ## Express
 
-```
+```javascript
 import {jebenaExpress} from 'jebena'
 
 const app = express()
 app.use(express.json())
 
-//accept only json body, not required (you can check it anyway you want)
+//catch json errors, not required (you can check it anyway you want)
 app.use((err,req,res,next) => {
     res.status(400).send({"error":"bad request"})
 })
@@ -48,7 +48,6 @@ app.use((err,req,res,next) => {
 const spec = {
     email: isEmail(),
     password: all(String, minLength(8)),
-    someUnwantedData: ["/234/sd1"]
 }
 
 app.post("/users", jebenaExpress(spec), () => {
@@ -59,7 +58,7 @@ app.post("/users", jebenaExpress(spec), () => {
 ```
 
 That's it. jebena handles the error and returns a 400 response with the below sample body.
-```
+```javascript
 {
   "message": "Bad Request",
   "errors": [
@@ -74,7 +73,7 @@ Supports Javascript primitive data types `String, Number, Boolean` + custom type
 
 ### Arrays
 
-```
+```javascript
 const spec = {
     books: [] //array of any type
     books: [String] //array of strings
@@ -89,7 +88,7 @@ const spec = {
 ```
 
 ### Nested objects
-```
+```javascript
 const spec: [
     person: {
         id: Number,
@@ -115,7 +114,7 @@ const spec: [
 
 `all(type1, type2, type3)` - validates each type
 
-```
+```javascript
 const spec = {
     phone: all(Number, length(10))
 }
@@ -123,7 +122,7 @@ const spec = {
 
 `minLength(num)` - validates minimum length
 
-```
+```javascript
 const spec = {
     password: all(String, minLength(8))
 }
@@ -131,7 +130,7 @@ const spec = {
 
 `match(regex, customErrorMsg)` - tests regular expression against the value
 
-```
+```javascript
 const spec = {
     phone: match(/^\d+$/) //numbers only
 }
@@ -139,7 +138,7 @@ const spec = {
 
 `isEmail()` - check if string is in a valid email format
 
-```
+```javascript
 const spec = {
     phone: match(/^\d+$/) //numbers only
 }
@@ -150,7 +149,7 @@ return true/false from your function
 
 return `[<boolean>, <customErrorMsg>]` if you want to pass custom error msg
 
-```
+```javascript
 const spec = {
     fullName: (val) => {
         const fn = val.split(" ")
@@ -165,4 +164,4 @@ const spec = {
 
 ## Tests
 
-`npm run test`
+`npm test`
