@@ -5,7 +5,7 @@ node_js:
   - "node"
 
 script:
-  - npm jebena-test
+  - npm run jebena-test
 
 deploy:
   provider: npm
