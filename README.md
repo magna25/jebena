@@ -1,5 +1,11 @@
 # Jebena
-Simple and lightweight ES6 promise based JSON validation library with **0** dependencies
+
+[![Build Status](https://travis-ci.org/magna25/jebena.svg?branch=master)](https://travis-ci.org/magna25/jebena)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
+[![npm version](https://badge.fury.io/js/jebena.svg)](https://badge.fury.io/js/jebena)
+
+
+Lightweight ES6 promise based JSON validation library with **0** dependencies
 
 Heavily inspired by https://github.com/lperrin/paperwork
 
@@ -40,7 +46,7 @@ import {jebenaExpress} from 'jebena'
 const app = express()
 app.use(express.json())
 
-//catch json errors, not required (you can check it anyway you want)
+//catch json errors, not required (however, you must make sure req.body is a json data before you call jebenaExpress)
 app.use((err,req,res,next) => {
     res.status(400).send({"error":"bad request"})
 })
@@ -51,15 +57,14 @@ const spec = {
 }
 
 app.post("/users", jebenaExpress(spec), () => {
-    //req.body is validated and all unwanted data is removed
-    console.log(req.body) // {email: "test@gmail.com", password:"password"}
+    //req.body is validated and cleaned
 })
 ```
 
-That's it. jebena handles the error and returns a 400 response with the below sample body.
+That's it. jebena returns a 400 response silently if there are any errors. Sample 400 response:
+
 ```javascript
 {
-  "message": "Bad Request",
   "errors": [
     "password: must be at least 8 characters long"
   ]
@@ -87,6 +92,7 @@ const spec = {
 ```
 
 ### Nested objects
+
 ```javascript
 const spec: [
     person: {
@@ -109,9 +115,10 @@ const spec: [
     }
 ]
 ```
+
 ### Custom types
 
-`all(type1, type2, type3)` - validates each type
+`all(type1, type2, type3...)` - validates each type
 
 ```javascript
 const spec = {
@@ -127,6 +134,21 @@ const spec = {
 }
 ```
 
+`maxLength(num)` - validates maximum length
+
+```javascript
+const spec = {
+    username: maxLength(25)
+}
+```
+
+`length(num)` - checks if value is exactly n characters long
+
+```javascript
+const spec = {
+    phone: length(10)
+```
+
 `match(regex, customErrorMsg)` - tests regular expression against the value
 
 ```javascript
@@ -139,12 +161,21 @@ const spec = {
 
 ```javascript
 const spec = {
-    phone: match(/^\d+$/) //numbers only
+    email: isEmail()
+}
+```
+
+`equals(val)` - verfies user value matches the defined value
+
+```javascript
+const spec = {
+    role: equals("ADMIN")
 }
 ```
 
 ### Custom validation
-return true/false from your function
+
+return `true/false` from your function
 
 return `[<boolean>, <customErrorMsg>]` if you want to pass custom error msg
 
@@ -161,6 +192,6 @@ const spec = {
 }
 ```
 
-## Tests
+## Test
 
-`npm test`
+`npm run jebena-test`
