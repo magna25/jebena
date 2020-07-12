@@ -1,0 +1,17 @@
+language: node_js
+
+node_js:
+  - "12",
+  - "node"
+  
+script:
+  - npm jebena-test
+
+deploy:
+  provider: npm
+  email: $NPM_EMAIL
+  api_key: $NPM_API_TOKEN
+  skip_cleanup: true
+  on:
+    tags: true
+    branch: master
