@@ -5,7 +5,6 @@ const Length = function (val){this.val = val}
 const Match = function (reg,errorMsg) {this.reg = reg, this.errorMsg = errorMsg}
 const Equals = function (val) {this.val = val}
 const Email = function (){};
-const StringNumber = function (){};
 
 const validator = (spec, val,  prevKey = null,) => {
 
@@ -88,6 +87,14 @@ const getType = (val) => {
     return typeof val
 }
 
+const isNumber = (val) => {
+    if(typeof val === "number" && val != Infinity && val != -Infinity) return true
+    if(typeof val == "string"){
+        const num = val.trim()
+        if(num !== "" && num !== "Infinity" && num !== "-Infinity" && !isNaN(num))  return true
+    }
+    return false
+}
 
 const getViolations = (key, type, val, allowNull = false) => {
 
@@ -101,7 +108,7 @@ const getViolations = (key, type, val, allowNull = false) => {
         if(!allowNull &&  val[key] == "") return `${key}: can't be empty`
     }
     else if(type === Number){
-        if(typeof val[key] !== "number") return `${key}: must be a number, received ${getType(val[key])}`
+        if(!isNumber(val[key])) return `${key}: must be a number, received ${getType(val[key])}`
     }
     else if(type === Boolean){
         if(typeof val[key] !== "boolean") return `${key}: must be a boolean, received ${getType(val[key])}`
@@ -138,11 +145,6 @@ const getViolations = (key, type, val, allowNull = false) => {
     else if(type instanceof Length) {
         if(typeof val[key] !== "string" && typeof val[key] !== "number") return `${key}: must be a string or number, received ${getType(val[key])}`
         if(val[key].toString().length != type.val) return `${key}: must be exactly ${type.val} characters long`        
-        
-    }
-    else if(type instanceof StringNumber) {
-        if(typeof val[key] !== "string" && typeof val[key] !== "number") return `${key}: must be a number, received ${getType(val[key])}`
-        if(isNaN(val[key])) return `${key}: must be a number`        
         
     }
     else if(type instanceof Match) {
@@ -194,20 +196,16 @@ const isEmail = () => {
     return new Email()
 }
 
-const isStringNumber = () => {
-    return new StringNumber()
-}
-
-const jebenaExpress = (spec, checkIfValidJSON = true) => {
+const jebenaExpress = (spec, dataSource = "body") => {
     return (req, res, next) => {
-        jebena(spec, req.body)
+        jebena(spec, dataSource == "query" ? req.query: req.body)
         .then(res => {
-            req.body = res
+            if(dataSource == "query") req.query = res
+            else req.body = res 
             next()
         })
         .catch(errs => {
             return res.status(400).send({
-                "message": "Bad Request",
                 "errors": errs
             })
         })
@@ -222,7 +220,6 @@ const jebena = (spec, val) =>{
     })
 }
 
-
 export {
     jebenaExpress,
     all,
@@ -232,7 +229,6 @@ export {
     match,
     length,
     equals,
-    isStringNumber,
     
 }
 export default jebena
