@@ -1,6 +1,5 @@
 # Jebena
-
-[![Build Status](https://travis-ci.org/magna25/jebena.svg?branch=master)](https://travis-ci.org/magna25/jebena)
+![CI](https://github.com/magna25/jebena/workflows/CI/badge.svg)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![npm version](https://badge.fury.io/js/jebena.svg)](https://badge.fury.io/js/jebena)
 
