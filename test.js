@@ -1,9 +1,38 @@
-import jebena, { jebenaExpress, minLength, maxLength, length, all, match, equals, isEmail, isStringNumber} from "./src/validator.js"
+import jebena, { jebenaExpress, minLength, maxLength, length, all, match, equals, isEmail} from "./src/validator.js"
 
-//https://stackoverflow.com/a/57100519/1929075
+class ExpressMock {
+    goToNext = false
+    errors = {
+        status: null, 
+        msg: null
+    }
+    req = {
+        body:null, 
+        query: null
+    }
+    res = {
+        send: this.send,
+        status: function(val){
+            this.errors.status = val
+            return this
+        }.bind(this)
+    }
+    send = (val) => {
+        this.errors.msg = val
+        return this
+    }
+    next = () => {
+        this.goToNext = true
+        return this
+    }
+    async post(path, spec, callback, dataSource = "body"){
+        await jebenaExpress(spec, dataSource)(this.req, this.res, this.next)
+        if(this.goToNext) callback(this.req, this.res)
+    }
+} 
+
 const Color = {
     Reset: "\x1b[0m",
-    
     FgBlack: "\x1b[30m",
     FgRed: "\x1b[31m",
     FgGreen: "\x1b[32m",
@@ -17,6 +46,7 @@ const Color = {
     BgCyan: "\x1b[46m",
     BgWhite: "\x1b[47m"
   }
+
 const colorify = (color, string) =>{
     return `${color}${string}${Color.Reset}`
    
@@ -33,52 +63,58 @@ const testResult = (description, expectation, actual, err = null) => {
         return false 
     }
 }
-const description = (state, specType, inputType, msg = "") => `${state} for spec type ${ colorify(Color.FgYellow, specType)} and input type ${colorify(Color.FgYellow, inputType)}${msg}`
+const description = (state, specType, inputType, msg = "") => `return ${state == "return false"?colorify(Color.FgRed, "false"): colorify(Color.FgGreen, "true")} for spec type ${ colorify(Color.FgYellow, specType)} and input type ${colorify(Color.FgYellow, inputType)}${msg}`
 
 const tests = [
     //description, expectation, json spec, value being tested
-    [description("pass", "string", "string"), true, {name: String}, {name: "Foo Bar"}],
-    [description("fail", "string", "string object"), false, {name: String}, {name: new String("Foo bar")}],
-    [description("fail","string", "number"), false, {name: String}, {name: 4}],
-    [description("fail", "string", "boolean"), false, {name: String}, {name: false}],
-    [description("fail", "string", "undefined"), false, {name: String}, {name: undefined}],
-    [description("fail", "string", "null"), false, {name: String}, {name: null}],
-    [description("fail", "string", "object[any]"), false, {name: String}, {name: {}}],
-    [description("pass", "number", "number"), true, {age: Number}, {age: 4}],
-    [description("pass", "number", "number", " (decimal)"), true, {age: Number}, {age: 4.1}],
-    [description("pass", "number", "number", " (scientfic notation)"), true, {age: Number}, {age: 1e2}],
-    [description("pass", "number", "number", " (parsed)"), true, {age: Number}, {age: parseInt("45")}],
-    [description("fail", "number", "boolean"), false, {age: Number}, {age: false}],
-    [description("fail", "number", "null"), false, {age: Number}, {age: null}],
-    [description("fail", "number", "number object"), false, {age: Number}, {age: new Number()}],
-    [description("fail", "number", "undefined"), false, {age: Number}, {age: undefined}],
-    [description("fail", "number", "object<any>"), false, {age: Number}, {age: {}}],
-    [description("pass", "array<any>", "array"), true, {name: []}, {name: ["string"]}],
-    [description("pass", "array<any>", "array<any>"), true, {name: []}, {name: [1]}],
-    [description("fail", "array<any>", "array<any>", " (empty array)"), false, {name: []}, {name: new String("Foo bar")}],
-    [description("fail", "array<any>", "string object"), false, {name: []}, {name: new String("Foo bar")}],
-    [description("fail","array<any>", "number"), false, {name: []}, {name: 4}],
-    [description("fail", "array<any>", "boolean"), false, {name: []}, {name: false}],
-    [description("fail", "array<any>", "undefined"), false, {name: []}, {name: undefined}],
-    [description("fail", "array<any>", "null"), false, {name: []}, {name: null}],
-    [description("fail", "array<any>", "object<any>"), false, {name: []}, {name: {}}],
-    [description("pass", "array<String>", "array<String>"), true, {name: [String]}, {name: ["hello"]}],
-    [description("fail","array<String>", "array<Number>"), false, {name: [String]}, {name: [4]}],
-    [description("fail", "array<String>", "array<Boolean>"), false, {name: [String]}, {name: [false]}],
-    [description("fail", "array<String>", "array<undefined>"), false, {name: [String]}, {name: [undefined]}],
-    [description("fail", "array<String>", "array<null>"), false, {name: [String]}, {name: [null]}],
-    [description("fail", "array<String>", "array<Object<any>>"), false, {name: [String]}, {name: [Object]}],
-    [description("pass", "array<Number>", "array<Number>"), true, {name: [Number]}, {name: [2]}],
-    [description("fail","array<Number>", "array<String>"), false, {name: [Number]}, {name: [""]}],
-    [description("fail", "array<Number>", "array<Boolean>"), false, {name: [Number]}, {name: [false]}],
-    [description("fail", "array<Number>", "array<undefined>"), false, {name: [Number]}, {name: [undefined]}],
-    [description("fail", "array<Number>", "array<null>"), false, {name: [Number]}, {name: [null]}],
-    [description("pass", "array<Boolean>", "array<Boolean>"), true, {name: [Boolean]}, {name: [true]}],
-    [description("fail", "array<Boolean>", "array<String>"), false, {name: [Boolean]}, {name: [""]}],
-    [description("fail", "array<Boolean>", "array<undefined>"), false, {name: [Boolean]}, {name: [undefined]}],
-    [description("fail", "array<Boolean>", "array<null>"), false, {name: [Boolean]}, {name: [null]}],
-    [description("fail", "array<Boolean>", "array<Object<any>>"), false, {name: [Boolean]}, {name: [Object]}],
-    [description("pass", "object<any>", "Object<any>"), true, {name: {}}, {name: [Object]}],
+    [description("return true", "string", "string"), true, {name: String}, {name: "Foo Bar"}],
+    [description("return false", "string", "string object"), false, {name: String}, {name: new String("Foo bar")}],
+    [description("return false","string", "number"), false, {name: String}, {name: 4}],
+    [description("return false", "string", "boolean"), false, {name: String}, {name: false}],
+    [description("return false", "string", "undefined"), false, {name: String}, {name: undefined}],
+    [description("return false", "string", "null"), false, {name: String}, {name: null}],
+    [description("return false", "string", "object[any]"), false, {name: String}, {name: {}}],
+    [description("return true", "number", "number"), true, {age: Number}, {age: 4}],
+    [description("return true", "number", "number", " (decimal)"), true, {age: Number}, {age: 4.1}],
+    [description("return true", "number", "string", " (number)"), true, {age: Number}, {age: "4.1"}],
+    [description("return false", "number", "string", " (empty string)"), false, {age: Number}, {age: ""}],
+    [description("return false", "number", "number", " (Infinity)"), false, {age: Number}, {age: Infinity}],
+    [description("return false", "number", "number", " (-Infinity)"), false, {age: Number}, {age: -Infinity}],
+    [description("return false", "number", "string", " (Infinity)"), false, {age: Number}, {age: "Infinity"}],
+    [description("return false", "number", "string", " (-Infinity)"), false, {age: Number}, {age: "-Infinity"}],
+    [description("return true", "number", "number", " (scientfic notation)"), true, {age: Number}, {age: 1e2}],
+    [description("return true", "number", "number", " (parsed)"), true, {age: Number}, {age: parseInt("45")}],
+    [description("return false", "number", "boolean"), false, {age: Number}, {age: false}],
+    [description("return false", "number", "null"), false, {age: Number}, {age: null}],
+    [description("return false", "number", "number object"), false, {age: Number}, {age: new Number()}],
+    [description("return false", "number", "undefined"), false, {age: Number}, {age: undefined}],
+    [description("return false", "number", "object<any>"), false, {age: Number}, {age: {}}],
+    [description("return true", "array<any>", "array"), true, {name: []}, {name: ["string"]}],
+    [description("return true", "array<any>", "array<any>"), true, {name: []}, {name: [1]}],
+    [description("return false", "array<any>", "array<any>", " (empty array)"), false, {name: []}, {name: []}],
+    [description("return false", "array<any>", "string object"), false, {name: []}, {name: new String("Foo bar")}],
+    [description("return false","array<any>", "number"), false, {name: []}, {name: 4}],
+    [description("return false", "array<any>", "boolean"), false, {name: []}, {name: false}],
+    [description("return false", "array<any>", "undefined"), false, {name: []}, {name: undefined}],
+    [description("return false", "array<any>", "null"), false, {name: []}, {name: null}],
+    [description("return false", "array<any>", "object<any>"), false, {name: []}, {name: {}}],
+    [description("return true", "array<String>", "array<String>"), true, {name: [String]}, {name: ["hello"]}],
+    [description("return false","array<String>", "array<Number>"), false, {name: [String]}, {name: [4]}],
+    [description("return false", "array<String>", "array<Boolean>"), false, {name: [String]}, {name: [false]}],
+    [description("return false", "array<String>", "array<undefined>"), false, {name: [String]}, {name: [undefined]}],
+    [description("return false", "array<String>", "array<null>"), false, {name: [String]}, {name: [null]}],
+    [description("return false", "array<String>", "array<Object<any>>"), false, {name: [String]}, {name: [Object]}],
+    [description("return true", "array<Number>", "array<Number>"), true, {name: [Number]}, {name: [2]}],
+    [description("return false","array<Number>", "array<String>"), false, {name: [Number]}, {name: [""]}],
+    [description("return false", "array<Number>", "array<Boolean>"), false, {name: [Number]}, {name: [false]}],
+    [description("return false", "array<Number>", "array<undefined>"), false, {name: [Number]}, {name: [undefined]}],
+    [description("return false", "array<Number>", "array<null>"), false, {name: [Number]}, {name: [null]}],
+    [description("return true", "array<Boolean>", "array<Boolean>"), true, {name: [Boolean]}, {name: [true]}],
+    [description("return false", "array<Boolean>", "array<String>"), false, {name: [Boolean]}, {name: [""]}],
+    [description("return false", "array<Boolean>", "array<undefined>"), false, {name: [Boolean]}, {name: [undefined]}],
+    [description("return false", "array<Boolean>", "array<null>"), false, {name: [Boolean]}, {name: [null]}],
+    [description("return false", "array<Boolean>", "array<Object<any>>"), false, {name: [Boolean]}, {name: [Object]}],
+    [description("return true", "object<any>", "Object<any>"), true, {name: {}}, {name: [Object]}],
     ["validate array of nested types - 1 ", true, {books:[{person:{docs:[{id:String, link: {self:String}}]}}]}, {books:[{person:{docs:[{id:"234234",link:{self:"http://google.com"}}]}}]}],
     ["validate array of nested types - 2 ", false, {books:[{person:{docs:[{id:String, link: {self:String}}]}}]}, {books:[{person:{docs:[{id:5,link:{self:"http://google.com"}}]}}]}],
     ["validate length function for type string and expect -> true", true, {password:length(5)}, {password:"55555"} ],
@@ -108,32 +144,30 @@ const tests = [
     ["validate regex only numbers spec and expect -> true", true, {phone:match(/^\d+$/)}, {phone:234234}],   
     ["validate regex only numbers spec and expect -> false - wrong type", false, {phone:match(/^\d+$/)}, {phone:false}],   
     ["validate regex only numbers spec and expect -> false - wrong value", false, {phone:match(/^\d+$/)}, {phone:"skdfsdf"}],
-    ["validate equals function and expect -> true", true, {phone:equals("12345")}, {phone:"12345"}],
-    ["validate equals function and expect -> false - wrong type", false, {phone:equals("12345")}, {phone:false}],   
-    ["validate equals function and expect -> false - wrong value", false, {phone:equals("12345")}, {phone:"1345"}],   
-    ["validate isEmail function and expect -> true", true, {email:isEmail()}, {email:"foo@bar.com"}],   
-    ["validate isEmail function and expect -> false - wrong type", false, {email:isEmail()}, {email:2}],   
-    ["validate isEmail function and expect -> false - invalid email", false, {email:isEmail()}, {email:"foobar@ccom"}],   
-    ["validate isEmail function and expect -> false - invalid email", false, {email:isEmail()}, {email:"foobarccom@"}]   ,
-    ["validate isStringNumber function and expect -> true", true, {age:isStringNumber()}, {age:"23"}],   
-    ["validate isStringNumber function and expect -> true", true, {age:isStringNumber()}, {age:23}],   
-    ["validate isStringNumber function and expect -> false - wrong type", false, {age:isStringNumber()}, {age:false}],   
-    ["validate isStringNumber function and expect -> false - wrong value", false, {age:isStringNumber()}, {age:"23s"}],   
+    ["validate regex only numbers spec and expect -> false - empty string", false, {phone:match(/^\d+$/)}, {phone:""}],
+    ["validate equals function -> expect true", true, {phone:equals("12345")}, {phone:"12345"}],
+    ["validate equals function -> expect false - wrong type", false, {phone:equals("12345")}, {phone:false}],   
+    ["validate equals function -> expect false - wrong value", false, {phone:equals("12345")}, {phone:"1345"}],   
+    ["validate isEmail function -> expect true", true, {email:isEmail()}, {email:"foo@bar.com"}],   
+    ["validate isEmail function -> expect false - wrong type", false, {email:isEmail()}, {email:2}],   
+    ["validate isEmail function -> expect false - invalid email", false, {email:isEmail()}, {email:"foobar@ccom"}],   
+    ["validate isEmail function -> expect false - invalid email", false, {email:isEmail()}, {email:"foobarccom@"}]   ,
     ["not allow missing props", false, {age:Number}, {}],   
-    ["allow custom validation expect false", false, {age:all(Number, (val) => val > 20?true:false)}, {age:18}],   
-    ["allow custom validation expect true", true, {age:all(Number, (val) => val > 20?true:false)}, {age:21}],   
-    ["allow optional value and expect true", true, {"age?":Number}, {}],   
-    ["allow optional value and expect true", true, {"age?":Number}, {age:23}],   
-    ["allow optional value and expect false -- wrong type", false, {"age?":Number}, {age:"234"}],   
+    ["allow custom validation -> expect false", false, {age:all(Number, (val) => val > 20?true:false)}, {age:18}],   
+    ["allow custom validation -> expect true", true, {age:all(Number, (val) => val > 20?true:false)}, {age:21}],   
+    ["allow optional value -> expect true", true, {"age?":Number}, {}],   
+    ["allow optional value -> expect true", true, {"age?":Number}, {age:23}],   
+    ["allow optional value -> expect false -- wrong type", false, {"age?":Number}, {age:"s"}],   
 ]
 
 
 
 console.log(colorify(Color.FgCyan, "Starting tests for jebena..."))
-const runTests = async(tests) => {
+
+const runTests = async (tests) => {
     const results = {passed:0, failed:0, time: Date.now()}
     for (const test of tests) {
-        await jebena(test[2], test[3])
+        jebena(test[2], test[3])
         .then((res) => {
             testResult(test[0],test[1],true)? results.passed += 1: results.failed += 1
         })
@@ -142,7 +176,7 @@ const runTests = async(tests) => {
         })
     }
     //extra data removal test
-    await jebena({name:String, "age?":Number}, {name:"hello", age:3, title:"ss"})
+    jebena({name:String, "age?":Number}, {name:"hello", age:3, title:"ss"})
     .then(res => {
         const props = Object.keys(res)
         testResult("remove extra data",props.length === 2,true)? results.passed += 1: results.failed += 1
@@ -158,17 +192,67 @@ const runTests = async(tests) => {
         return true
     }}, {age:16})
     .then(res => {
-        testResult("display custom error message for functions",err[0] == "you must be 18 to register for this service",true)? results.passed += 1: results.failed += 1
+        testResult("display custom error message for functions", err[0] == "you must be 18 to register for this service", true) ? results.passed += 1: results.failed += 1
     })
     .catch(err => {
-        testResult("display custom error message for functions",err[0] == "you must be 18 to register for this service",false)? results.passed += 1: results.failed += 1
+        testResult("display custom error message for functions", err[0] == "you must be 18 to register for this service", false)? results.passed += 1: results.failed += 1
     })
+
+    //express test
+    const spec = {
+        name: String,
+        age: Number
+    }
+    const app = new ExpressMock()
+
+    //invalid body test
+    app.req.body = {
+        name: "Foo bar",
+        age: "3s4"
+    }
+    await app.post("/", spec, (req, res) => {})
+    testResult("return 404 response with description when passed invalida value -- Expressjs req.body test", true, app.errors.status == 400 && app.errors.msg != null) ? results.passed += 1: results.failed += 1
+
+     //valid body && cleaned data test
+    let data = null
+     app.req.body = {
+        name: "Foo bar",
+        age: 3,
+        extraProp: "hello world"
+    }
+
+    await app.post("/", spec, (req, res) => {
+        data = req.body
+    })
+    testResult("return cleaned data in req.body -- Expressjs test", true,  data != null && data.age == 3 && !("extraProp" in data)) ? results.passed += 1: results.failed += 1
+
+     //invalid query test
+     app.req.query = {
+        name: "Foo bar",
+        age: "3s4"
+    }
+    await app.post("/", spec, (req, res) => {}, "query")
+    testResult("return 404 response with description when passed invalida value -- Expressjs req.query test", true, app.errors.status == 400 && app.errors.msg != null) ? results.passed += 1: results.failed += 1
+
+     //valid query && cleaned data test
+     app.req.query = {
+        name: "Foo bar",
+        age: 3,
+        extraProp: "hello world"
+    }
+
+    await app.post("/", spec, (req) => {
+        data = req.query
+    }, "query")
+    testResult("return cleaned data in req.query -- Expressjs test", true,  data != null && data.age == 3 && !("extraProp" in data)) ? results.passed += 1: results.failed += 1
+
     
     return results
+   
 }
 
 
-runTests(tests).then(res =>{
+runTests(tests).then(res => {
     console.log(`---------------------------------------------------\n${colorify(Color.FgCyan, 'Testing finished.')} ${(Date.now()-res.time)/1000} secs `)
     console.log(`Tests run: ${res.failed + res.passed}`)
     console.log(`Passed: ${colorify(Color.FgGreen,res.passed)}`)

@@ -1,6 +1,5 @@
 # Jebena
-
-[![Build Status](https://travis-ci.org/magna25/jebena.svg?branch=master)](https://travis-ci.org/magna25/jebena)
+![CI](https://github.com/magna25/jebena/workflows/CI/badge.svg)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![npm version](https://badge.fury.io/js/jebena.svg)](https://badge.fury.io/js/jebena)
 
@@ -59,6 +58,24 @@ const spec = {
 app.post("/users", jebenaExpress(spec), () => {
     //req.body is validated and cleaned
 })
+```
+`jebenaExpress()` by default runs the validation against req.body 
+but you can change that by passing a second argument.
+
+
+```javascript
+
+const spec = {
+    page: Number,
+    pageSize: Number
+}
+
+app.get("/products", jebenaExpress(spec, "query"), () => {
+    //req.query is validated and cleaned
+})
+
+
+
 ```
 
 That's it. jebena returns a 400 response silently if there are any errors. Sample 400 response:

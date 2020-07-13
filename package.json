@@ -7,7 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "node test.js"
+    "jebena-test": "node test.js"
   },
   "keywords": [
     "json",
