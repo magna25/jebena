@@ -60,6 +60,24 @@ app.post("/users", jebenaExpress(spec), () => {
     //req.body is validated and cleaned
 })
 ```
+`jebenaExpress()` by default runs the validation against req.body 
+but you can change that by passing a second argument.
+
+
+```javascript
+
+const spec = {
+    page: Number,
+    pageSize: Number
+}
+
+app.get("/products", jebenaExpress(spec, "query"), () => {
+    //req.query is validated and cleaned
+})
+
+
+
+```
 
 That's it. jebena returns a 400 response silently if there are any errors. Sample 400 response:
 
