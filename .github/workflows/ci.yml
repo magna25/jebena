@@ -19,7 +19,8 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm run jebena-test
+    -name: run functional tests
+      run: npm run jebena-test
       env:
         CI: true
 
