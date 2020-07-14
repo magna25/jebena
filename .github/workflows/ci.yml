@@ -20,7 +20,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     -name: Run functional tests
-      run: npm run jebena-test
+    run: npm run jebena-test
       env:
         CI: true
 
