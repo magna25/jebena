@@ -1,4 +1,4 @@
-import jebena, { jebenaExpress, minLength, maxLength, length, all, match, equals, isEmail} from "./src/validator.js"
+import jebena, { jebenaExpress, minLength, maxLength, length, all, match, equals, isEmail, oneOf} from "./src/validator.js"
 
 class ExpressMock {
     goToNext = false
@@ -148,6 +148,10 @@ const tests = [
     ["validate equals function -> expect true", true, {phone:equals("12345")}, {phone:"12345"}],
     ["validate equals function -> expect false - wrong type", false, {phone:equals("12345")}, {phone:false}],   
     ["validate equals function -> expect false - wrong value", false, {phone:equals("12345")}, {phone:"1345"}],   
+    ["validate oneOf function -> expect true", true, {role: oneOf(["admin", "customer"])}, {role:"admin"}],
+    ["validate oneOf function -> expect false - wrong type", false, {role: oneOf(["customer"])}, {role:false}],   
+    ["validate oneOf function -> expect false - invalid argument", false, {role: oneOf("foo bar")}, {role:false}],   
+    ["validate oneOf function -> expect false - wrong value", false, {role: oneOf(["admin", "customer"])}, {role:"foo bar"}],   
     ["validate isEmail function -> expect true", true, {email:isEmail()}, {email:"foo@bar.com"}],   
     ["validate isEmail function -> expect false - wrong type", false, {email:isEmail()}, {email:2}],   
     ["validate isEmail function -> expect false - invalid email", false, {email:isEmail()}, {email:"foobar@ccom"}],   

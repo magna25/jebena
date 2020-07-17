@@ -4,9 +4,10 @@ const MaxLength = function (val){this.val = val}
 const Length = function (val){this.val = val}
 const Match = function (reg,errorMsg) {this.reg = reg, this.errorMsg = errorMsg}
 const Equals = function (val) {this.val = val}
+const OneOf = function (val) {this.val = val}
 const Email = function (){};
 
-const validator = (spec, val,  prevKey = null,) => {
+const validator = (spec, val,  prevKey = null) => {
 
     if(!isObjectLiteral(spec)) throw "invalid spec"
 
@@ -40,14 +41,14 @@ const validator = (spec, val,  prevKey = null,) => {
         
         if(e.includes("undefined")){
             const er = e.split(":")
-            return `${er[0]}: is missing`
+            return `${er[0]}: is required`
         }
         return e
     })
 }
 
 const isObjectLiteral = (obj) =>{
-    return typeof obj !== null && typeof obj !== undefined && obj.constructor === Object
+    return obj !== null && typeof obj !== undefined && obj.constructor === Object
 }
 
 const handleArrayErrors = (key, type, val) => {
@@ -76,7 +77,7 @@ const handleArrayErrors = (key, type, val) => {
 }
 
 const isOptional = (key) => {
-    return key[key.length-1] == "?" ? true: false
+    return key[key.length-1] == "?"
 }
 
 
@@ -155,6 +156,10 @@ const getViolations = (key, type, val, allowNull = false) => {
         if(typeof val[key] !== "string" && typeof val[key] !== "number") return `${key}: must be a string or number, received ${getType(val[key])}`
         if( val[key] !== type.val) return `${key}: must euqal ${type.val}`        
     }
+    else if(type instanceof OneOf) {
+        if(!Array.isArray(type.val)) throw `${key}: must be an array`
+        if(!type.val.includes(val[key])) return `${key}: must be one of -> ${type.val.join(", ")}`  
+    }
     else if(type instanceof Email){ 
         //https://stackoverflow.com/a/2932811/1929075
         if(typeof val[key] !== "string" || !(/^([\w\!\#$\%\&\'\*\+\-\/\=\?\^\`{\|\}\~]+\.)*[\w\!\#$\%\&\'\*\+\-\/\=\?\^\`{\|\}\~]+@((((([a-z0-9]{1}[a-z0-9\-]{0,62}[a-z0-9]{1})|[a-z])\.)+[a-z]{2,6})|(\d{1,3}\.){3}\d{1,3}(\:\d{1,5})?)$/i.test(val[key]))) return `${key}: invalid email address`
@@ -190,6 +195,10 @@ const all = (...vals) => {
 }
 const equals = (val) => {
     return new Equals(val)
+}
+
+const oneOf = (val) => {
+    return new OneOf(val)
 }
 
 const isEmail = () => {
@@ -229,6 +238,7 @@ export {
     match,
     length,
     equals,
+    oneOf
     
 }
 export default jebena
