@@ -190,6 +190,14 @@ const spec = {
 }
 ```
 
+`oneOf([val1, val2..])` - verfies user value is one of the array elements
+
+```javascript
+const spec = {
+    role: oneOf(["ADMIN", "CUSTOMER"])
+}
+```
+
 ### Custom validation
 
 return `true/false` from your function
