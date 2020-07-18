@@ -89,7 +89,7 @@ const getType = (val) => {
 }
 
 const isNumber = (val) => {
-    if(typeof val === "number" && val != Infinity && val != -Infinity) return true
+    if(typeof val === "number" && val !== Infinity && val !== -Infinity) return true
     if(typeof val == "string"){
         const num = val.trim()
         if(num !== "" && num !== "Infinity" && num !== "-Infinity" && !isNaN(num))  return true
@@ -110,6 +110,9 @@ const getViolations = (key, type, val, allowNull = false) => {
     }
     else if(type === Number){
         if(!isNumber(val[key])) return `${key}: must be a number, received ${getType(val[key])}`
+        if(typeof val[key] === "string"){
+            val[key] = Number(val[key])
+        }
     }
     else if(type === Boolean){
         if(typeof val[key] !== "boolean") return `${key}: must be a boolean, received ${getType(val[key])}`

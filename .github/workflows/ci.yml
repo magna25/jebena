@@ -25,7 +25,6 @@ jobs:
         CI: true
 
   publish:
-
     if: github.event_name == 'push' && github.ref == 'refs/heads/master' && ! contains(toJSON(github.event.commits.*.message), '[skip-ci]')
 
     needs: test
@@ -51,7 +50,6 @@ jobs:
         git-user-email: github-actions[bot]@users.noreply.github.com
         git-message: 'bump version and tag for release: {version} [skip-ci]'
         preset: 'angular'
-        tag-prefix: ''
         output-file: 'CHANGELOG.md'
     - name: Publish to NPM
       run: npm publish
