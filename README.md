@@ -198,6 +198,24 @@ const spec = {
 }
 ```
 
+`any()` - accepts all but undefined
+
+```javascript
+const spec = {
+    name: any()
+}
+```
+
+
+`dependsOn(key, predicate)` - validates param based on predicate
+
+```javascript
+const spec = {
+    deliveryOrPickup: oneOf(["delivery", "pickup"]),
+    deliveryAddress: all(dependsOn('deliveryOrPickup', (val) => val == "delivery"), String)
+}
+```
+
 ### Custom validation
 
 return `true/false` from your function
