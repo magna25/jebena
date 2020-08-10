@@ -1,4 +1,4 @@
-import jebena, { jebenaExpress, minLength, maxLength, length, all, match, equals, isEmail, oneOf} from "./src/validator.js"
+import jebena, {dependsOn,jebenaExpress, minLength, maxLength, length, all, match, equals, isEmail, oneOf, any} from "./src/validator.js"
 
 class ExpressMock {
     goToNext = false
@@ -162,6 +162,10 @@ const tests = [
     ["allow optional value -> expect true", true, {"age?":Number}, {}],   
     ["allow optional value -> expect true", true, {"age?":Number}, {age:23}],   
     ["allow optional value -> expect false -- wrong type", false, {"age?":Number}, {age:"s"}],   
+    ["validate dependsOn -- condition not met", true, {"age?":Number, title: all(String,length(4), dependsOn("age", (val) => val > 15))}, {age:6}],   
+    ["validate dependsOn -- condition met", false, {"age?":Number, title: all(String,length(4), dependsOn("age", (val) => val > 5))}, {age:6}],   
+    ["validate 'any' function", true, {name: any()}, {name:6}],   
+    ["validate 'any' function -- undefined value", false, {name: any()}, {names:6}],   
 ]
 
 
