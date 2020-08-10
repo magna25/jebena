@@ -1,4 +1,4 @@
-# 1.2.0 (2020-07-18)
+# 1.3.0 (2020-08-10)
 
 
 ### Bug Fixes
@@ -14,6 +14,7 @@
 
 ### Features
 
+* add 'any' and 'dependsOn' types ([87f5248](https://github.com/magna25/jebena/commit/87f52484c32463bf2932e2ab1fffa1c01fdce6f2))
 * add oneOf custom type ([23e7a80](https://github.com/magna25/jebena/commit/23e7a808f6439305c57591c3844450ddddf2d93c))
 
 
