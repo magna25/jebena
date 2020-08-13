@@ -1,6 +1,6 @@
 {
   "name": "jebena",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Lightweight JSON validation library",
   "main": "src/validator.js",
   "directories": {
