@@ -25,8 +25,8 @@ class ExpressMock {
         this.goToNext = true
         return this
     }
-    async post(path, spec, callback, dataSource = "body"){
-        await jebenaExpress(spec, dataSource)(this.req, this.res, this.next)
+    async post(path, spec, callback, ops){
+        await jebenaExpress(spec, ops)(this.req, this.res, this.next)
         if(this.goToNext) callback(this.req, this.res)
     }
 } 
@@ -163,7 +163,7 @@ const tests = [
     ["allow optional value -> expect true", true, {"age?":Number}, {age:23}],   
     ["allow optional value -> expect false -- wrong type", false, {"age?":Number}, {age:"s"}],   
     ["validate dependsOn -- condition not met", true, {"age?":Number, title: all(String,length(4), dependsOn("age", (val) => val > 15))}, {age:6}],   
-    ["validate dependsOn -- condition met", false, {"age?":Number, title: all(String,length(4), dependsOn("age", (val) => val > 5))}, {age:6}],   
+    ["validate dependsOn -- condition met", false, {"age":Number, title: all(String,length(4), dependsOn("age", (val) => val > 5))}, {age:6}],   
     ["validate 'any' function", true, {name: any()}, {name:6}],   
     ["validate 'any' function -- undefined value", false, {name: any()}, {names:6}],   
 ]
@@ -207,9 +207,13 @@ const runTests = async (tests) => {
     })
 
     //express test
+
     const spec = {
         name: String,
         age: Number
+    }
+    const ops = {
+        dataSource: "body"
     }
     const app = new ExpressMock()
 
@@ -218,7 +222,7 @@ const runTests = async (tests) => {
         name: "Foo bar",
         age: "3s4"
     }
-    await app.post("/", spec, (req, res) => {})
+    await app.post("/", spec, (req, res) => {}, ops)
     testResult("return 404 response with description when passed invalida value -- Expressjs req.body test", true, app.errors.status == 400 && app.errors.msg != null) ? results.passed += 1: results.failed += 1
 
      //valid body && cleaned data test
@@ -231,15 +235,16 @@ const runTests = async (tests) => {
 
     await app.post("/", spec, (req, res) => {
         data = req.body
-    })
+    }, ops)
     testResult("return cleaned data in req.body -- Expressjs test", true,  data != null && data.age == 3 && !("extraProp" in data)) ? results.passed += 1: results.failed += 1
 
+    ops.dataSource = "query"
      //invalid query test
      app.req.query = {
         name: "Foo bar",
         age: "3s4"
     }
-    await app.post("/", spec, (req, res) => {}, "query")
+    await app.post("/", spec, (req, res) => {}, ops)
     testResult("return 404 response with description when passed invalida value -- Expressjs req.query test", true, app.errors.status == 400 && app.errors.msg != null) ? results.passed += 1: results.failed += 1
 
      //valid query && cleaned data test
@@ -248,10 +253,11 @@ const runTests = async (tests) => {
         age: 3,
         extraProp: "hello world"
     }
+ 
 
     await app.post("/", spec, (req) => {
         data = req.query
-    }, "query")
+    }, ops)
     testResult("return cleaned data in req.query -- Expressjs test", true,  data != null && data.age == 3 && !("extraProp" in data)) ? results.passed += 1: results.failed += 1
 
     
