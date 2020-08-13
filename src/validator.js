@@ -257,11 +257,23 @@ const any = () => {
     return new Any()
 }
 
-const jebenaExpress = (spec, dataSource = "body") => {
+const defaultOps = {
+    allowEmpty: false,
+    ignoreUnknown: true,
+    showOnlyFirstErrorForSameKey: false,
+    dataSource: "body"
+
+}
+
+const jebenaExpress = (spec, options) => {
+    const ops = {...defaultOps, ...options}
+
     return (req, res, next) => {
-        jebena(spec, dataSource == "query" ? req.query: req.body)
+        const data = ops.dataSource == "query" ? req.query: req.body
+        ops.originalObj = data
+        jebena(spec, data, ops)
         .then(res => {
-            if(dataSource == "query") req.query = res
+            if(ops.dataSource == "query") req.query = res
             else req.body = res 
             next()
         })
@@ -275,15 +287,8 @@ const jebenaExpress = (spec, dataSource = "body") => {
 
 const jebena = (spec, val, options = {}) =>{
     return new Promise((resolve, reject) => {
-
-        const defaultOps = {
-            allowEmpty: false,
-            ignoreUnknown: true,
-            originalObj: val,
-            showOnlyFirstErrorForSameKey: false
-
-        }
         const ops = {...defaultOps, ...options}
+        ops.originalObj = val
 
         const res = validator(spec, val, null, ops)
         if(res.length) reject([...new Set(res)])
