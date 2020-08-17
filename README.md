@@ -1,4 +1,8 @@
-# Jebena
+
+![alt text](https://i.imgur.com/B0D4Bs6.png) 
+<br/>
+<br/>
+<br/>
 ![CI](https://github.com/magna25/jebena/workflows/CI/badge.svg)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![npm version](https://badge.fury.io/js/jebena.svg)](https://badge.fury.io/js/jebena)
@@ -8,10 +12,10 @@ Lightweight ES6 promise based JSON validation library with **0** dependencies
 
 Heavily inspired by https://github.com/lperrin/paperwork
 
-## Installation
+# Installation
 `npm i jebena`
 
-## Usage
+# Usage
 
 ```javascript
 import jebena from 'jebena'
@@ -20,7 +24,7 @@ import jebena from 'jebena'
 const spec = {
     name: String,
     age: Number,
-    "phone?": Number // ? means optional prop
+    "phone?": Number // ? = optional prop
 }
 
 const data = {
@@ -30,53 +34,31 @@ const data = {
 
 jebena(spec, data)
 .then( res => {
-    console.log(res) //outputs cleaned and validated data
+    // cleaned and validated data
 })
 .catch(err => {
-    console.log(err) //outputs array of errors
+    // array of errors
 })
 
 ```
-## Express
+# Express
 
 ```javascript
-import {jebenaExpress} from 'jebena'
+import {jx, email, runEach} from 'jebena'
 
 const app = express()
 app.use(express.json())
 
-//catch json errors, not required (however, you must make sure req.body is a json data before you call jebenaExpress)
-app.use((err,req,res,next) => {
-    res.status(400).send({"error":"bad request"})
-})
-
 const spec = {
-    email: isEmail(),
-    password: all(String, minLength(8)),
+    email: email(),
+    password: runEach(String, minLen(8)),
 }
 
-app.post("/users", jebenaExpress(spec), () => {
+app.post("/users", jx(spec), () => {
     //req.body is validated and cleaned
 })
 ```
-`jebenaExpress()` by default runs the validation against req.body 
-but you can change that by passing a second argument.
 
-
-```javascript
-
-const spec = {
-    page: Number,
-    pageSize: Number
-}
-
-app.get("/products", jebenaExpress(spec, "query"), () => {
-    //req.query is validated and cleaned
-})
-
-
-
-```
 
 That's it. jebena returns a 400 response silently if there are any errors. Sample 400 response:
 
@@ -88,153 +70,107 @@ That's it. jebena returns a 400 response silently if there are any errors. Sampl
 }
 ```
 
-## Types
+ # Options
 
-Supports Javascript primitive data types `String, Number, Boolean` + custom types
+jebena accepts a third optional argument where you can define your preferences. Below are the defaults 
 
-### Arrays
+```javascript
+const defaultOps = {
+    allowEmpty: false,
+    ignoreUnknown: true,
+    showOnlyFirstErrorForSameKey: false,
+    dataSource: "body" //for express only. either 'body' or 'query'
+
+}
+```
+
+# Custom Types
+
+`runEach(type1, type2...)` validates each type against key value
+
+`email()` checks if value is email
+
+`len(n)` checks if value is exactly n characters long
+
+`minLen(n)` checks if value is at least n characters long
+
+`maxLen(n)` checks if value is at most n characters long 
+
+`match(reg)` checks if value matches regex 
+
+`equals(val)` checks if value equals given value
+
+`oneOf([el, el2, el3...])` checks if value is equal to one of the array elements 
+
+`ifKey(key, predicate = v => true)` runs validation on current key only if the key argument is present in the spec and the predicate returns true
+
+`ifKey(key, predicate = v => true).runEach(type1, type2...)` validates each type if predicate is true 
+
+`any()` accepts any value but undefined 
+
+`int()` checks if value is integer
+
+`pInt()` checks if value is positive integer
+
+`date(format = "mm/dd/yy")`  checks if value matches date format. Supports `-` or `/` separators and `dd/mm/yyyy` or `mm/dd/yyyy` formats    
+ <br/>
+<br/>
+<br/>
+
+# Advanced Usage
+
+## Custom Validation
+
+For custom validations simply provide a predicate. If you want to return a custom error message, return `[false, <your error message>]`
 
 ```javascript
 const spec = {
-    books: [] //array of any type
-    books: [String] //array of strings
-    books: [Number] //array of numbers
-    books: [Boolean] //array of booleans
+    fullName: (val) => val.split(" ").length == 2 ? true : [false, "invalid name"] 
+}
+```
+
+## Arrays and nested objects
+
+```javascript
+const spec = {
+    links: [], //array of any
+    address: {
+        street: String,
+        city: String,
+        state: oneOf(statesList),
+        zipCode: runEach(int(),len(5))
+    }
     books: [{
-        id: String,
         title: String,
-        year: Number
-    }] //array of literal objects
-}
-```
-
-### Nested objects
-
-```javascript
-const spec: [
-    person: {
-        id: Number,
-        address: {
-            street: String,
-            ...
-        },
+        author: String,
+        yearPublished: int(),
         someProp: {
-            anotherProp: {
-                anotherProp: [
-                    {
-                        id: Number,
-                        name: String
-                    }
-                ]
-            }
+            otherProp: Number
         }
-
-    }
-]
-```
-
-### Custom types
-
-`all(type1, type2, type3...)` - validates each type
-
-```javascript
-const spec = {
-    phone: all(Number, length(10))
+    }]
 }
 ```
 
-`minLength(num)` - validates minimum length
+## Param dependent on other param
+
+There might situations where you want to run a validation on a param only if another param meets certain conditions and for that you can use `ifKey()` 
 
 ```javascript
-const spec = {
-    password: all(String, minLength(8))
+const spec  = {
+    shippingPreference: oneOf(['pickup', 'delivery']),
+    deliveryAddress: ifKey('shippingPreference', v => v == 'delivery').runEach({
+        street: String,
+        city: String,
+        state: oneOf(['az','co']),
+        zipCode: runEach(int(),len(5))
+
+    })
 }
 ```
-
-`maxLength(num)` - validates maximum length
-
-```javascript
-const spec = {
-    username: maxLength(25)
-}
-```
-
-`length(num)` - checks if value is exactly n characters long
-
-```javascript
-const spec = {
-    phone: length(10)
-```
-
-`match(regex, customErrorMsg)` - tests regular expression against the value
-
-```javascript
-const spec = {
-    phone: match(/^\d+$/) //numbers only
-}
-```
-
-`isEmail()` - check if string is in a valid email format
-
-```javascript
-const spec = {
-    email: isEmail()
-}
-```
-
-`equals(val)` - verfies user value matches the defined value
-
-```javascript
-const spec = {
-    role: equals("ADMIN")
-}
-```
-
-`oneOf([val1, val2..])` - verfies user value is one of the array elements
-
-```javascript
-const spec = {
-    role: oneOf(["ADMIN", "CUSTOMER"])
-}
-```
-
-`any()` - accepts all but undefined
-
-```javascript
-const spec = {
-    name: any()
-}
-```
-
-
-`dependsOn(key, predicate)` - validates param based on predicate
-
-```javascript
-const spec = {
-    deliveryOrPickup: oneOf(["delivery", "pickup"]),
-    deliveryAddress: all(dependsOn('deliveryOrPickup', (val) => val == "delivery"), String)
-}
-```
-
-### Custom validation
-
-return `true/false` from your function
-
-return `[<boolean>, <customErrorMsg>]` if you want to pass custom error msg
-
-```javascript
-const spec = {
-    fullName: (val) => {
-        const fn = val.split(" ")
-        if(fn.length < 2) return [false, "enter full name"] //return array for custom error message
-        return true
-    },
-    age: (val) => {
-        return val > 18
-    }
-}
-```
+ <br/>
 
 ## Test
+
+clone repo to your machine and run:
 
 `npm run jebena-test`
