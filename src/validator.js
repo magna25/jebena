@@ -1,53 +1,20 @@
-const Multiple = function (vals) {this.vals = vals}
-const MinLength = function (val) {this.val = val}
-const MaxLength = function (val){this.val = val}
-const Length = function (val){this.val = val}
-const Match = function (reg,errorMsg) {this.reg = reg; this.errorMsg = errorMsg}
-const Equals = function (val) {this.val = val}
-const OneOf = function (val) {this.val = val}
-const DependsOn = function (key, predicate) {this.key = key; this.predicate = predicate}
-const Email = function (){};
-const Any = function (){};
+const JMultiple = function (vals) {this.vals = vals}
+const JMinLength = function (val) {this.val = val}
+const JMaxLength = function (val){this.val = val}
+const JLength = function (val){this.val = val}
+const JMatch = function (reg,errorMsg) {this.reg = reg; this.errorMsg = errorMsg}
+const JEquals = function (val) {this.val = val}
+const JOneOf = function (val) {this.val = val}
+const JEmail = function (){}
+const JInt = function (){}
+const JPositiveInt = function (){}
+const JAny = function (){}
+const JDate = function (format){this.format = format}
+const JDependsOn = function (key, predicate) {this.key = key; this.predicate = predicate; this.types = null}
 
-const validator = (spec, val,  prevKey, options) => {
-
-    if(!isObjectLiteral(spec)) throw "invalid spec"
-
-    Object.keys(spec).filter(k => isOptional(k)).forEach(key => {
-            const opVal = spec[key]
-            const opKey = key.slice(0,-1)
-            delete spec[key] 
-            if(opKey in val) spec[opKey] = opVal
-    })
-    //remove extra data
-    if(options.ignoreUnknown && isObjectLiteral(val)){
-        Object.keys(val).forEach(key => {
-            if(!(key in spec)) delete val[key]
-        })
-    }
-
-    let errors = []
-    
-    Object.keys(spec).map(key => {
-        const error = getViolations(key, spec[key], val, options)
-        
-        if(Array.isArray(error)){
-            errors = errors.concat(error.map(err => prevKey && error != "" ?`${prevKey}.${err}`:err))
-        }
-        else {
-            errors.push(prevKey && error != "" ? `${prevKey}.${error}`:error)
-        }
-        
-    })
-
-    return errors.filter(err => err.includes(':')).map(err => {
-        err = err.replace(/#/g,".")
-        if(err.includes("undefined")){
-            const error = err.split(":")
-            return `${error[0]}: is required`
-        }
-        return err
-    })
+JDependsOn.prototype.runEach = function(...types){
+    this.types = types
+    return this
 }
 
 const isObjectLiteral = (obj) =>{
@@ -100,9 +67,18 @@ const isNumber = (val) => {
     return false
 }
 
-const getViolations = (key, type, val, options) => {
+const getNestedObjValue = (keys, obj) => {
+    if(!obj) return null
+    const ks = keys.split(".")
+    if(ks.length > 1){
+        return getNestedObjValue(ks.slice(1).join("."),obj[ks[0]])
+    }
+    else return obj[ks[0]]
     
-    if(!(type instanceof Multiple) && val[key] === undefined) return `${key}: is required`
+}
+
+const getViolations = (key, type, val, options) => {    
+    if(!(type instanceof JDependsOn) && !(type instanceof JMultiple) && val[key] === undefined) return `${key}: is required`
 
     if(isObjectLiteral(type)){
         
@@ -126,32 +102,31 @@ const getViolations = (key, type, val, options) => {
         if(!(val[key] instanceof Array) || !val[key].length) return `${key}: must be an array with at least 1 element, received ${getType(val[key])}`
         
         if(type.length == 1){
-            const x = handleArrayErrors(key, type, val, options)
-            return x
+            const arrayErrors = handleArrayErrors(key, type, val, options)
+            return arrayErrors
         }
         else if(type.length > 1) throw `${key}: invalid type for array`
 
         
     }
-    else if(type instanceof Multiple) {       
+    else if(type instanceof JMultiple) {       
         //check if we have dependsOn instance and move it to the front of the array
-        const dependsOn = type.vals.find(item => item instanceof DependsOn)
+        const dependsOn = type.vals.find(item => item instanceof JDependsOn)
         if(dependsOn){
-            type.vals = [dependsOn, ...type.vals.filter(item => !(item instanceof DependsOn))]
+            type.vals = [dependsOn, ...type.vals.filter(item => !(item instanceof JDependsOn))]
         }
 
-        const errs = []
+        let errs = []
         for (const t of type.vals){
-            if(t instanceof DependsOn){
-                if(typeof t.predicate === "function"){
-                    const kVal = getNestedObjValue(t.key, options.originalObj)
+            if(t instanceof JDependsOn){
+                const kVal = getNestedObjValue(t.key, options.originalObj)
+                if(kVal !== undefined && typeof t.predicate === "function"){
                     if(!(t.predicate(kVal))){
                         delete val[key]
                         return errs
                     }
-                    else continue
                 }
-                else throw `${key}: second argument of dependsOn must be a function`
+                else return errs
             }
             const err = getViolations(key, t, val, options)
             if(Array.isArray(err)) errs = errs.concat(err)
@@ -160,41 +135,75 @@ const getViolations = (key, type, val, options) => {
         return options.showOnlyFirstErrorForSameKey && errs.length ? errs[0] : errs
     }
 
-    else if(type instanceof MinLength) {
+    else if(type instanceof JMinLength) {
         if(typeof val[key] !== "string" && typeof val[key] !== "number") return `${key}: must be a string or number, received ${getType(val[key])}`
         if(val[key].toString().length < type.val) return `${key}: must be at least ${type.val} characters long`
     }
-    else if(type instanceof MaxLength) {
+    else if(type instanceof JMaxLength) {
         if(typeof val[key] !== "string" && typeof val[key] !== "number") return `${key}: must be a string or number, received ${getType(val[key])}`
         if(val[key].toString().length > type.val) return `${key}: must be at most ${type.val} characters long`
         
     }
-    else if(type instanceof Length) {
+    else if(type instanceof JLength) {
         if(typeof val[key] !== "string" && typeof val[key] !== "number") return `${key}: must be a string or number, received ${getType(val[key])}`
         if(val[key].toString().length != type.val) return `${key}: must be exactly ${type.val} characters long`        
         
     }
-    else if(type instanceof Match) {
+    else if(type instanceof JMatch) {
         if(typeof val[key] !== "string" && typeof val[key] !== "number") return `${key}: must be a string or number, received ${getType(val[key])}`
         if(!(new RegExp(type.reg).test(val[key]))) return `${key}: ${type.errorMsg}`        
     }
-    else if(type instanceof Equals) {
+    else if(type instanceof JEquals) {
         if(typeof val[key] !== "string" && typeof val[key] !== "number") return `${key}: must be a string or number, received ${getType(val[key])}`
         if( val[key] !== type.val) return `${key}: must euqal ${type.val}`        
     }
-    else if(type instanceof OneOf) {
+    else if(type instanceof JOneOf) {
         if(!Array.isArray(type.val)) throw `${key}: must be an array`
-        if(!type.val.includes(val[key])) return `${key}: must be one of -> ${type.val.join(", ")}`  
+        if(!type.val.includes(val[key])) return `${key}: must be one of [${type.val.join(", ")}]`  
     }
-    else if(type instanceof DependsOn) {
-        if(typeof type.predcate !== "function") throw `${key}: second argument of dependsOn must be a function`
+    else if(type instanceof JDependsOn) {
         const kVal = getNestedObjValue(type.key, options.originalObj)
-        if(type.predcate(kVal) && val[key] == undefined) return `${key}: required`
+        if(kVal !== undefined){
+            if(type.predicate(kVal)){
+                if(val[key] === undefined) return `${key}: is required`
+                if(type.types && type.types.length){
+                    return getViolations(key, runEach(...type.types), val, options)
+                }
+            }
+        }
     }
-    else if(type instanceof Any){
-       if(val[key] == undefined) return `${key}: is required`
+    else if(type instanceof JAny){
+    //    if(val[key] === undefined) return `${key}: is required`
     }
-    else if(type instanceof Email){ 
+    else if(type instanceof JInt){
+        if(!Number.isInteger(val[key])) return `${key}: must be integer`
+     }
+     else if(type instanceof JPositiveInt){
+        if(!Number.isInteger(val[key])) return `${key}: must be integer`
+        if(val[key] < 1) return `${key}: must be greater than 0`
+     }
+    else if(type instanceof JDate){
+        if(typeof type.format !== "string") return `${key}: fatal error - DATE format must be a string`
+        const sep = getDateSeparator(type.format)
+        if(sep){
+            const validFormatDate = new RegExp("[0-9]{1,2}(SEP)[0-9]{1,2}(SEP)[0-9]{4}".replace(/SEP/g,sep)).test(val[key])
+            if(validFormatDate){
+                const format = type.format.split(sep)
+                const date = val[key].split(sep).map(v=>Number(v))
+                try{
+                    new Date(val[key]).toISOString()
+                    if(format[0][0] == "m" && date[0] > 12 && !isValidDay(date[0],date[1],date[2]) || format[1][0] == "m" && date[1] > 12 && !isValidDay(date[1],date[0],date[2])) return `${key}: invalid date, must be in ${type.format} format`
+                }
+                catch(err){ 
+                    return `${key}: invalid date, must be in ${type.format} format`
+                }
+            }
+            else return `${key}: invalid date, must be in ${type.format} format`
+        }
+        else return `${key}: fatal error - invalid DATE format passed`
+    }
+     
+    else if(type instanceof JEmail){ 
         //https://stackoverflow.com/a/2932811/1929075
         if(typeof val[key] !== "string" || !(/^([\w\!\#$\%\&\'\*\+\-\/\=\?\^\`{\|\}\~]+\.)*[\w\!\#$\%\&\'\*\+\-\/\=\?\^\`{\|\}\~]+@((((([a-z0-9]{1}[a-z0-9\-]{0,62}[a-z0-9]{1})|[a-z])\.)+[a-z]{2,6})|(\d{1,3}\.){3}\d{1,3}(\:\d{1,5})?)$/i.test(val[key]))) return `${key}: invalid email address`
     }
@@ -204,57 +213,116 @@ const getViolations = (key, type, val, options) => {
         if(!res) return `${key}: invalid value`
               
     }
+   
     
     return ""
 
 }
-
-const getNestedObjValue = (keys, obj) => {
-    if(!obj) return null
-    const ks = keys.split(".")
-    if(ks.length > 1){
-        return getNestedObjValue(ks.slice(1).join("."),obj[ks[0]])
+const getDateSeparator = (format) => {
+    const reg = "[m|d]{1,2}(/|-)[m|d]{1,2}(/|-)[y]{4}"
+    if(new RegExp(reg).test(format.toLowerCase())){
+        const d_sep = (format.match(/-/g)||[]).length
+        const s_sep = (format.match(/\//g)||[]).length
+        if(d_sep == 2) return "-"
+        if(s_sep == 2) return "/"
     }
-    else return obj[ks[0]]
+    return null
+}
+
+const isValidDay = (m, d, y) => {
+    const md = {1: 31, 2: 29, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 30, 11: 30, 12: 31}
+    if(d == 2 && !(y&3||y&15&&!(y%25))) return d > 0 && d <= 29
+    return d > 0 && d <= md[m]
     
 }
 
-const length = (val) => {
-    return new Length(val)
+const validator = (spec, val,  prevKey, options) => {
+
+    if(!isObjectLiteral(spec)) throw "invalid spec"
+
+    Object.keys(spec).filter(k => isOptional(k)).forEach(key => {
+            const opVal = spec[key]
+            const opKey = key.slice(0,-1)
+            delete spec[key] 
+            if(opKey in val) spec[opKey] = opVal
+    })
+    //remove extra data
+    if(options.ignoreUnknown && isObjectLiteral(val)){
+        Object.keys(val).forEach(key => {
+            if(!(key in spec)) delete val[key]
+        })
+    }
+
+    let errors = []
+    
+    Object.keys(spec).map(key => {
+        const error = getViolations(key, spec[key], val, options)
+        
+        if(Array.isArray(error)){
+            errors = errors.concat(error.map(err => prevKey && error != "" ?`${prevKey}.${err}`:err))
+        }
+        else {
+            errors.push(prevKey && error != "" ? `${prevKey}.${error}`:error)
+        }
+        
+    })
+
+    return errors.filter(err => err.includes(':')).map(err => {
+        err = err.replace(/#/g,".")
+        if(err.includes("undefined")){
+            const error = err.split(":")
+            return `${error[0]}: is required`
+        }
+        return err
+    })
 }
 
-const minLength = (val) => {
-    return new MinLength(val)
+const len = (val) => {
+    return new JLength(val)
 }
 
-const maxLength = (val) => {
-    return new MaxLength(val)
+const minLen = (val) => {
+    return new JMinLength(val)
+}
+
+const maxLen = (val) => {
+    return new JMaxLength(val)
 }
 
 const match = (val, errorMsg="Invalid value") => {
-    return new Match(val, errorMsg)
+    return new JMatch(val, errorMsg)
 }
-const all = (...vals) => {
-    return new Multiple(vals)
+const runEach = (...types) => {
+    return new JMultiple(types)
 }
 const equals = (val) => {
-    return new Equals(val)
+    return new JEquals(val)
 }
 
 const oneOf = (val) => {
-    return new OneOf(val)
+    return new JOneOf(val)
 }
 
-const dependsOn = (key, predicate) => {
-    return new DependsOn(key, predicate)
+const int = () => {
+    return new JInt()
+}
+const pInt = () => {
+    return new JPositiveInt()
+}
+const date = (format = "mm/dd/yyyy") => {
+    return new JDate(format)
 }
 
-const isEmail = () => {
-    return new Email()
+const email = () => {
+    return new JEmail()
 }
 
 const any = () => {
-    return new Any()
+    return new JAny()
+}
+
+const ifKey = (key, predicate = v => true) => {
+    return new JDependsOn(key, predicate)
 }
 
 const defaultOps = {
@@ -265,7 +333,8 @@ const defaultOps = {
 
 }
 
-const jebenaExpress = (spec, options) => {
+//express
+const jx = (spec, options) => {
     const ops = {...defaultOps, ...options}
 
     return (req, res, next) => {
@@ -297,17 +366,19 @@ const jebena = (spec, val, options = {}) =>{
 }
 
 export {
-    jebenaExpress,
-    all,
-    isEmail,
-    minLength,
-    maxLength,
+    jx,
+    runEach,
+    email,
+    minLen,
+    maxLen,
     match,
-    length,
+    len,
     equals,
     oneOf,
-    dependsOn,
-    any
-    
+    ifKey,
+    any,
+    int,
+    pInt,
+    date
 }
 export default jebena
