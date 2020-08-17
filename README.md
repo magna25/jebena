@@ -70,7 +70,7 @@ That's it. jebena returns a 400 response silently if there are any errors. Sampl
 }
 ```
 
- # Options
+# Options
 
 jebena accepts a third optional argument where you can define your preferences. Below are the defaults 
 
@@ -119,7 +119,7 @@ const defaultOps = {
 
 # Advanced Usage
 
-## Custom Validation
+### Custom Validation
 
 For custom validations simply provide a predicate. If you want to return a custom error message, return `[false, <your error message>]`
 
@@ -129,7 +129,7 @@ const spec = {
 }
 ```
 
-## Arrays and nested objects
+### Arrays and nested objects
 
 ```javascript
 const spec = {
@@ -151,7 +151,7 @@ const spec = {
 }
 ```
 
-## Param dependent on other param
+### Param dependent on other param
 
 There might situations where you want to run a validation on a param only if another param meets certain conditions and for that you can use `ifKey()` 
 
