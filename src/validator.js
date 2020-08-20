@@ -6,14 +6,22 @@ const JMatch = function (reg,errorMsg) {this.reg = reg; this.errorMsg = errorMsg
 const JEquals = function (val) {this.val = val}
 const JOneOf = function (val) {this.val = val}
 const JEmail = function (){}
-const JInt = function (){}
-const JPositiveInt = function (){}
+const JInt = function (){this._castIfString = false}
+const JPositiveInt = function (){this._castIfString = false}
 const JAny = function (){}
 const JDate = function (format){this.format = format}
 const JDependsOn = function (key, predicate) {this.key = key; this.predicate = predicate; this.types = null}
 
 JDependsOn.prototype.runEach = function(...types){
     this.types = types
+    return this
+}
+JInt.prototype.castIfString = function(){
+    this._castIfString = true
+    return this
+}
+JPositiveInt.prototype.castIfString = function(){
+    this._castIfString = true
     return this
 }
 
@@ -176,9 +184,15 @@ const getViolations = (key, type, val, options) => {
     //    if(val[key] === undefined) return `${key}: is required`
     }
     else if(type instanceof JInt){
+
+        if(type._castIfString) val[key] = Number(val[key])
+
         if(!Number.isInteger(val[key])) return `${key}: must be integer`
      }
      else if(type instanceof JPositiveInt){
+
+        if(type._castIfString) val[key] = Number(val[key])
+
         if(!Number.isInteger(val[key])) return `${key}: must be integer`
         if(val[key] < 1) return `${key}: must be greater than 0`
      }
