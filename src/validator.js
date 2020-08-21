@@ -85,7 +85,14 @@ const getNestedObjValue = (keys, obj) => {
     
 }
 
-const getViolations = (key, type, val, options) => {    
+const getViolations = (key, type, val, options) => {
+    
+    if(isOptional(key)){
+        const optionalKey = key.slice(0,-1)
+        if(val[optionalKey] === undefined) return ""
+        else key = optionalKey
+    }
+    
     if(!(type instanceof JDependsOn) && !(type instanceof JMultiple) && val[key] === undefined) return `${key}: is required`
 
     if(isObjectLiteral(type)){
@@ -109,7 +116,7 @@ const getViolations = (key, type, val, options) => {
     else if(type instanceof Array){
         if(!(val[key] instanceof Array) || !val[key].length) return `${key}: must be an array with at least 1 element, received ${getType(val[key])}`
         
-        if(type.length == 1){
+        if(type.length == 1){ 
             const arrayErrors = handleArrayErrors(key, type, val, options)
             return arrayErrors
         }
@@ -254,16 +261,10 @@ const validator = (spec, val,  prevKey, options) => {
 
     if(!isObjectLiteral(spec)) throw "invalid spec"
 
-    Object.keys(spec).filter(k => isOptional(k)).forEach(key => {
-            const opVal = spec[key]
-            const opKey = key.slice(0,-1)
-            delete spec[key] 
-            if(opKey in val) spec[opKey] = opVal
-    })
     //remove extra data
     if(options.ignoreUnknown && isObjectLiteral(val)){
         Object.keys(val).forEach(key => {
-            if(!(key in spec)) delete val[key]
+            if(!(key + '?' in spec) && !(key in spec)) delete val[key]
         })
     }
 
@@ -354,11 +355,12 @@ const jx = (spec, options) => {
     return (req, res, next) => {
         const data = ops.dataSource == "query" ? req.query: req.body
         ops.originalObj = data
-        jebena(spec, data, ops)
+
+        return jebena(spec, data, ops)
         .then(res => {
             if(ops.dataSource == "query") req.query = res
             else req.body = res 
-            next()
+            return next()
         })
         .catch(errs => {
             return res.status(400).send({
